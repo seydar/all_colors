@@ -69,6 +69,10 @@ class Array
   def avg
     sum / size.to_f
   end
+
+  def median
+    self[size / 2]
+  end
 end
 
 
