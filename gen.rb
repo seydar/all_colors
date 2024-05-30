@@ -1,94 +1,15 @@
-require 'chunky_png'
-require 'matrix'
 require 'fileutils'
-require_relative 'monkey_patch.rb'
-
-class Array
-  def avg
-    sum.to_f / size
-  end
-end
+require_relative 'lib/monkey_patch.rb'
+require_relative 'lib/color.rb'
+require_relative 'lib/image.rb'
 
 PRNG = Random.new 1337
 
-NUM_COLORS = 64 # 32
-WIDTH = 512 # 256
-HEIGHT = 512 # 128
+NUM_COLORS = 32 # 64 # 32
+WIDTH = 256 # 512 # 256
+HEIGHT = 128 # 512 # 128
 START = [WIDTH / 6, HEIGHT / 2]
 
-RGB = Struct.new :R, :G, :B
-
-def neighbors(coord)
-  x, y   = *coord
-  neighs = [x - 1, x, x + 1].product([y - 1, y, y + 1]) - [x, y]
-  neighs.filter {|x, y| x < WIDTH && x >= 0 && y < HEIGHT && y >= 0 }
-end
-
-# This is the square of the euclidean distance.
-# Since we're comparing everything, we don't need to compute the sqrt,
-# since the order wouldn't change
-def euclidean(c1, c2)
-  r = c1.R - c2.R
-  g = c1.G - c2.G
-  b = c1.B - c2.B
-
-  r * r + g * g + b * b
-end
-
-def manhattan(c1, c2)
-  r = c1.R - c2.R
-  g = c1.G - c2.G
-  b = c1.B - c2.B
-
-  r + g + b 
-end
-
-def hue(rgb)
-  max = [rgb.R, rgb.G, rgb.B].max.to_f
-  min = [rgb.R, rgb.G, rgb.B].min.to_f
-
-  return 0.0 if max == min
-
-  hue = case max
-        when rgb.R
-          (rgb.G - rgb.B) / (max - min)
-        when rgb.G
-          2.0 + (rgb.B - rgb.R) / (max - min)
-        when rgb.B
-          4.0 + (rgb.R - rgb.G) / (max - min)
-        end
-
-  # commented out because this is only used for ordering, so we don't need these
-  # affine transformations
-
-  #if hue * 60 < 0
-  #  hue * 60 + 360
-  #else
-  #  hue * 60
-  #end
-end
-
-def remove_coral(pixels)
-  pxls = pixels.clone
-
-  WIDTH.times do |x|
-    next if x == 0 or x == WIDTH
-
-    HEIGHT.times do |y|
-      next if y == 0 or y == HEIGHT
-
-      if pixels[x - 1, y] == nil && pixels[x + 1, y] == nil
-        pxls[x, y] = nil
-      end
-
-      if pixels[x, y - 1] == nil && pixels[x, y + 1] == nil
-        pxls[x, y] = nil
-      end
-    end
-  end
-
-  pxls
-end
 
 # When placing a color, place it in the location where the average color
 # differential from its neighbors is the minimum
@@ -100,7 +21,7 @@ def calc_diff(pixels, coord, c)
   neighbors(coord).each do |n|
     nc = pixels[*n]
     if nc
-      diffs << euclidean(nc, c) if nc
+      diffs << (nc - c).mag_2 if nc
     end
   end
 
@@ -126,12 +47,13 @@ end
 
 raise "`colors.size` (#{colors.size}) must equal WIDTH * HEIGHT (#{WIDTH * HEIGHT})" unless colors.size == WIDTH * HEIGHT
 
-colors = colors.shuffle :random => PRNG
-colors = colors.sort_by {|rgb| hue rgb }.reverse
+#colors = colors.shuffle :random => PRNG
+colors = colors.sort_by {|rgb| rgb.hue }.reverse
 
 # Temporary place to do work instead of writing to bitmap
 #pixels = Array.new(WIDTH) { Array.new(HEIGHT) }
 pixels = Matrix.build(WIDTH, HEIGHT) {}
+avgs = Matrix.build(WIDTH, HEIGHT) { [RGB.new(0, 0, 0), 0] }
 
 available = Set.new
 
@@ -140,36 +62,60 @@ num_checks  = (ARGV[1] || 10).to_i
 checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1] }.to_h
 
 # loop through all colors that we want to place
-colors.size.times do |i|
+#colors.size.times do |i|
+5.times do |i|
 
   # Debug
-  if i % 256 == 0
+  #if i % 256 == 0
     puts "#{"%0.4f" % (100.0 * i / (WIDTH * HEIGHT))}%, queue #{available.size}"
-  end
+  #end
 
   if available.size == 0
     best = START
   else
     # Find the best place from the list of available coordinates
     # uses parallel processing, most expensive step
-    if available.size > 2000
-      sorted = available.parallel_sort_by {|c| calc_diff(pixels, c, colors[i]) }
-    else
-      # too small, don't parallelize it
-      sorted = available.sort_by {|c| calc_diff(pixels, c, colors[i]) }
+    #if available.size > 2000
+    #  sorted = available.parallel_sort_by {|c| calc_diff(pixels, c, colors[i]) }
+    #else
+    #  # too small, don't parallelize it
+    #  sorted = available.sort_by {|c| calc_diff(pixels, c, colors[i]) }
+    #end
+
+    sorted = available.sort_by do |coord|
+      avg, num = *avgs[*coord]
+      num      = [1, num].max
+      (colors[i] - avg / num.to_f).mag_2
     end
 
     best = sorted[0]
   end
+  p(available.map do |coord|
+      avg, num = *avgs[*coord]
+      num      = [1, num].max
+      [coord, (colors[i] - avg / num.to_f).mag_2]
+  end.sort_by {|a, b| b })
+  p best
 
   # Put pixel where it belongs
-  pixels[*best] = colors[i]
+  pixels[*best]   = colors[i]
+
+  # Adjust the average for that area
+  avg, num = *avgs[*best]
+  avgs[*best][0]  = (avg * num / (num + 1.0)) + colors[i].sq / (num + 1.0)
+  avgs[*best][1] += 1
   available.delete best
+
+  require 'pry'
+  binding.pry
 
   # adjust available list
   neighbors(best).each do |neighbor|
     # don't overwrite pixels
     available << neighbor unless pixels[*neighbor]
+    if pixels[*neighbor]
+      puts "uhoh #{neighbor.inspect}"
+    end
   end
 
   if checkpoints[i]
