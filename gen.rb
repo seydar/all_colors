@@ -1,15 +1,49 @@
+#!/usr/bin/env ruby --yjit
 require 'fileutils'
+require 'optimist'
 require_relative 'lib/monkey_patch.rb'
 require_relative 'lib/color.rb'
 require_relative 'lib/image.rb'
 
 PRNG = Random.new 1337
 
-NUM_COLORS = 32 # 64 # 32
-WIDTH = 256 # 512 # 256
-HEIGHT = 128 # 512 # 128
-START = [WIDTH / 6, HEIGHT / 2]
+#NUM_COLORS = 32 # 64 # 32
+#WIDTH = 256 # 512 # 256
+#HEIGHT = 128 # 512 # 128
+#START = [WIDTH / 6, HEIGHT / 2]
 
+opts = Optimist::options do
+  banner <<-EOS
+Use every color in the hex mapping exactly once.
+
+Usage:
+  gen.rb [options]
+where [options] are:
+
+EOS
+
+  opt :colors, "Number of colors", :type => :integer, :default => 32
+  opt :size, "Size ('WIDTHxHEIGHT') of output", :type => :string, :default => "256x128"
+  opt :start, "Starting pixel ('x,y')", :type => :string, :default => "128,64"
+  opt :checkpoints, "Number of checkpoint images to make", :type => :integer, :default => 10
+  opt :output, "Where to write the checkpoint images", :type => :string, :default => "output"
+  opt :debug, "Print the debug statements", :type => :boolean
+  opt :parallel, "How many cores to use", :type => :integer, :default => 4
+end
+
+$debug = opts[:debug]
+opts[:size]  = opts[:size].split("x").map(&:to_i)
+opts[:start] = opts[:start].split(",").map(&:to_i)
+
+WIDTH, HEIGHT = *opts[:size]
+
+def debug(*args)
+  puts(*args) if $debug
+end
+
+def d(*args)
+  p(*args) if $debug
+end
 
 # When placing a color, place it in the location where the average color
 # differential from its neighbors is the minimum
@@ -25,8 +59,8 @@ def calc_diff(pixels, coord, c)
     end
   end
 
-  diffs.avg * (9 - diffs.size) ** 2
-  #diffs.min
+  #diffs.avg * (9 - diffs.size) ** 2
+  diffs.min
 end
 
 # Create every color once and randomize the order
@@ -34,12 +68,12 @@ end
 colors = []
 
 # RGB
-NUM_COLORS.times do |r|
-  r = (255 * (r / NUM_COLORS.to_f)).to_i
-  NUM_COLORS.times do |g|
-    g = (255 * (g / NUM_COLORS.to_f)).to_i
-    NUM_COLORS.times do |b|
-      b = (255 * (b / NUM_COLORS.to_f)).to_i
+opts[:colors].times do |r|
+  r = (255 * (r / opts[:colors].to_f)).to_i
+  opts[:colors].times do |g|
+    g = (255 * (g / opts[:colors].to_f)).to_i
+    opts[:colors].times do |b|
+      b = (255 * (b / opts[:colors].to_f)).to_i
       colors << RGB.new(r, g, b)
     end
   end
@@ -51,79 +85,57 @@ raise "`colors.size` (#{colors.size}) must equal WIDTH * HEIGHT (#{WIDTH * HEIGH
 colors = colors.sort_by {|rgb| rgb.hue }.reverse
 
 # Temporary place to do work instead of writing to bitmap
-#pixels = Array.new(WIDTH) { Array.new(HEIGHT) }
 pixels = Matrix.build(WIDTH, HEIGHT) {}
-avgs = Matrix.build(WIDTH, HEIGHT) { [RGB.new(0, 0, 0), 0] }
 
 available = Set.new
 
 # calculate checkpoints in advance
-num_checks  = (ARGV[1] || 10).to_i
+num_checks  = opts[:checkpoints].to_i
 checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1] }.to_h
 
 # loop through all colors that we want to place
-#colors.size.times do |i|
-5.times do |i|
+colors.size.times do |i|
+#5.times do |i|
 
   # Debug
-  #if i % 256 == 0
-    puts "#{"%0.4f" % (100.0 * i / (WIDTH * HEIGHT))}%, queue #{available.size}"
-  #end
+  if i % 256 == 0
+    debug "#{"%0.4f" % (100.0 * i / (WIDTH * HEIGHT))}%, queue #{available.size}"
+  end
 
   if available.size == 0
-    best = START
+    best = opts[:start]
   else
     # Find the best place from the list of available coordinates
     # uses parallel processing, most expensive step
-    #if available.size > 2000
-    #  sorted = available.parallel_sort_by {|c| calc_diff(pixels, c, colors[i]) }
-    #else
-    #  # too small, don't parallelize it
-    #  sorted = available.sort_by {|c| calc_diff(pixels, c, colors[i]) }
-    #end
-
-    sorted = available.sort_by do |coord|
-      avg, num = *avgs[*coord]
-      num      = [1, num].max
-      (colors[i] - avg / num.to_f).mag_2
+    if available.size > 2000
+      sorted = available.parallel_sort_by(:cores => opts[:parallel]) {|c| calc_diff(pixels, c, colors[i]) }
+    else
+      # too small, don't parallelize it
+      sorted = available.sort_by {|c| calc_diff(pixels, c, colors[i]) }
     end
 
     best = sorted[0]
   end
-  p(available.map do |coord|
-      avg, num = *avgs[*coord]
-      num      = [1, num].max
-      [coord, (colors[i] - avg / num.to_f).mag_2]
-  end.sort_by {|a, b| b })
-  p best
 
   # Put pixel where it belongs
   pixels[*best]   = colors[i]
 
-  # Adjust the average for that area
-  avg, num = *avgs[*best]
-  avgs[*best][0]  = (avg * num / (num + 1.0)) + colors[i].sq / (num + 1.0)
-  avgs[*best][1] += 1
   available.delete best
-
-  require 'pry'
-  binding.pry
 
   # adjust available list
   neighbors(best).each do |neighbor|
     # don't overwrite pixels
     available << neighbor unless pixels[*neighbor]
-    if pixels[*neighbor]
-      puts "uhoh #{neighbor.inspect}"
-    end
+    #if pixels[*neighbor]
+    #  puts "uhoh #{neighbor.inspect}"
+    #end
   end
 
   if checkpoints[i]
-    check = ARGV[0] || "result"
-    FileUtils.mkdir_p check
+    FileUtils.mkdir_p opts[:output]
     #cleaned = remove_coral pixels
 
-    puts "Checkpoint #{checkpoints[i]}"
+    debug "Checkpoint #{checkpoints[i]}"
     img = ChunkyPNG::Image.new WIDTH, HEIGHT, ChunkyPNG::Color::TRANSPARENT
 
     HEIGHT.times do |y|
@@ -135,7 +147,9 @@ checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1]
       end
     end
 
-    img.save "#{check}/#{check}_#{"%02d" % checkpoints[i]}.png", :interlace => true
+    fname = "#{opts[:output]}/checkpoint_#{"%02d" % checkpoints[i]}.png"
+    img.save fname, :interlace => true
+    debug "Wrote #{fname}"
   end
 
 end
