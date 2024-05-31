@@ -5,6 +5,7 @@ require_relative 'lib/monkey_patch.rb'
 require_relative 'lib/color.rb'
 require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
+require_relative 'lib/sorting.rb'
 
 PRNG = Random.new 1337
 
@@ -65,7 +66,9 @@ end
 raise "`colors.size` (#{colors.size}) must equal WIDTH * HEIGHT (#{WIDTH * HEIGHT})" unless colors.size == WIDTH * HEIGHT
 
 #colors = colors.shuffle :random => PRNG
-colors = colors.sort_by {|rgb| rgb.hue }.reverse
+colors = colors.sort_by {|rgb| rgb.hue }
+
+
 
 # Temporary place to do work instead of writing to bitmap
 pixels  = Matrix.build(WIDTH, HEIGHT) {}
@@ -80,12 +83,12 @@ checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1]
 
 # loop through all colors that we want to place
 #colors.size.times do |i|
-5.times do |i|
+5000.times do |i|
 
   # Debug
-  #if i % 256 == 0
+  if i % 512 == 0
     debug "#{"%0.4f" % (100.0 * i / (WIDTH * HEIGHT))}%, queue #{available.size}"
-  #end
+  end
 
   if available.size == 0
     best = opts[:start]
@@ -93,22 +96,24 @@ checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1]
     # Find the best place from the list of available coordinates
     # uses parallel processing, most expensive step
     #if available.size > 2000
-    #  sorted = available.parallel_sort_by(:cores => opts[:parallel]) {|c| calc_diff(pixels, c, colors[i]) }
+    #  sorted = available.parallel_sort_by(:cores => opts[:parallel]) {|c| visited[*c] += 1; calc_diff_cache(pixels, caching, c, colors[i]) }
     #else
-      # too small, don't parallelize it
-      #sorted = available.sort_by {|c| visited[*c] += 1; calc_diff(pixels, c, colors[i]) }
+    #  # too small, don't parallelize it
+    #  sorted = available.sort_by {|c| visited[*c] += 1; calc_diff_cache(pixels, caching, c, colors[i]) }
     #end
     
-    sorted = available.sort_by {|c| visited[*c] += 1; calc_diff_long(pixels, caching, c, colors[i]) }
+    sorted = available.sort_by {|c| visited[*c] += 1; calc_diff_cache(pixels, caching, c, colors[i]) }
 
     best = sorted[0]
   end
-  p(available.map {|c| [c, calc_diff_long(pixels, caching, c, colors[i])] }.sort_by {|a, b| b })
-  p best
+  #p(available.map {|c| [c, calc_diff_cache(pixels, caching, c, colors[i])] }.sort_by {|a, b| b })
+  #p best
 
   # Put pixel where it belongs
   pixels[*best]   = colors[i]
-  update_cache caching, best, colors[i]
+  [best, *neighbors(best)].each do |coord|
+    update_cache caching, coord, colors[i]
+  end
 
   available.delete best
 
@@ -116,9 +121,9 @@ checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1]
   neighbors(best).each do |neighbor|
     # don't overwrite pixels
     available << neighbor unless pixels[*neighbor]
-    if pixels[*neighbor]
-      puts "uhoh #{neighbor.inspect}"
-    end
+    #if pixels[*neighbor]
+    #  puts "uhoh #{neighbor.inspect}"
+    #end
   end
 
   if checkpoints[i]
@@ -132,7 +137,7 @@ checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1]
       WIDTH.times do |x|
         rgb = pixels[x, y]
         if rgb
-          img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.G, 255
+          img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
         end
       end
     end

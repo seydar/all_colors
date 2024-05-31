@@ -8,7 +8,7 @@ def calc_diff(pixels, coord, c)
   neighbors(coord).each do |n|
     nc = pixels[*n]
     if nc
-      diffs << (nc - c).mag_2 if nc
+      diffs << (nc - c).mag_2
     end
   end
 
@@ -31,27 +31,27 @@ def calc_diff_long(pixels, caching, coord, c)
   middle = -1 * (c * sum.inject {|s, v| s + v } * 2 / sum.size)
   last   = (c * c)
 
-  p [first, middle, last]
   first + middle + last
 end
 
 def calc_diff_cache(pixels, caching, coord, c)
   hash   = caching[*coord]
-  size   = [1, hash[:size]].max
 
-  first  = hash[:squares] / size
-  middle = -1 * (c * hash[:sum] * 2 / size)
+  first  = hash[:squares]
+  middle = -1 * (c * hash[:sum] * 2)
   last   = (c * c)
 
-  p [first, middle, last]
-  first + middle + last
+  (first + middle + last) * (9 - hash[:size]) ** 2
 end
 
 def update_cache(caching, coord, c)
   hash = caching[*coord]
-  hash[:squares] += (c * c)
-  hash[:sum]     += c.vector
-  hash[:size]    += 1
+  #hash[:squares] += (c * c)
+  #hash[:sum]     += c.vector
+  #hash[:size]    += 1
+  hash[:size]   += 1
+  hash[:squares] = hash[:squares] * (hash[:size] - 1) / hash[:size] + (c * c) / hash[:size]
+  hash[:sum]    += hash[:sum] * (hash[:size] - 1) / hash[:size] + c.vector / hash[:size]
 end
 
 
