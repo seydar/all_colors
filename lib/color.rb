@@ -1,44 +1,52 @@
-RGB = Struct.new :R, :G, :B do
+class RGB
+  attr_accessor :vector
+
+  def initialize(r, g, b)
+    @vector = Vector[r, g, b]
+  end
+
+  def R; @vector[0]; end
+  def G; @vector[1]; end
+  def B; @vector[2]; end
+
   def +(o)
-    RGB.new(self.R + o.R,
-            self.G + o.G,
-            self.B + o.B)
+    case o
+    when RGB
+      RGB.new(*(@vector + o.vector))
+    else
+      RGB.new(*(@vector + o))
+    end
   end
 
   def -(o)
-    RGB.new(self.R - o.R,
-            self.G - o.G,
-            self.B - o.B)
+    case o
+    when RGB
+      RGB.new(*(@vector - o.vector))
+    else
+      RGB.new(*(@vector - o))
+    end
   end
 
-  def *(scalar)
-    RGB.new(self.R * scalar,
-            self.G * scalar,
-            self.B * scalar)
-  end
-
-  def /(scalar)
-    RGB.new(self.R / scalar,
-            self.G / scalar,
-            self.B / scalar)
-  end
-
-  def mag
-    Math.sqrt(mag_2)
+  def *(o)
+    case o
+    when RGB
+      @vector.inner_product(o.vector)
+    else
+      RGB.new(*(@vector * o))
+    end
   end
 
   def mag_2
-    self.R ** 2 + self.G ** 2 + self.B ** 2
+    self.R ** self.R + self.G ** self.G + self.B ** self.B
   end
 
-  def sq
-    RGB.new(self.R ** 2,
-            self.G ** 2,
-            self.B ** 2)
-  end
-
-  def manhattan
-    self.R + self.G + self.B
+  def /(o)
+    case o
+    when RGB
+      RGB.new(*(@vector / o.vector))
+    else
+      RGB.new(*(@vector / o))
+    end
   end
 
   def hue
@@ -66,4 +74,6 @@ RGB = Struct.new :R, :G, :B do
     #end
   end
 end
+
+
 
