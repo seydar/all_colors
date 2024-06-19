@@ -3,7 +3,7 @@ require 'matrix'
 
 def neighbors(coord)
   x, y   = *coord
-  neighs = [x - 1, x, x + 1].product([y - 1, y, y + 1]) - [x, y]
+  neighs = (x - 1..x + 1).to_a.product((y - 1..y + 1).to_a) - [x, y]
   neighs.filter {|x, y| x < WIDTH && x >= 0 && y < HEIGHT && y >= 0 }
 end
 

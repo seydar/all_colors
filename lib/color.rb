@@ -2,7 +2,8 @@ class RGB
   attr_accessor :vector
 
   def initialize(r, g, b)
-    @vector = Vector[r, g, b]
+    #@vector = Vector[r, g, b]
+    @vector = [r, g, b]
   end
 
   def R; @vector[0]; end
@@ -12,40 +13,64 @@ class RGB
   def +(o)
     case o
     when RGB
-      RGB.new(*(@vector + o.vector))
+      #RGB.new(*(@vector + o.vector))
+      RGB.new self.R + o.R,
+              self.G + o.G,
+              self.B + o.B
     else
-      RGB.new(*(@vector + o))
+      #RGB.new(*(@vector + o))
+      RGB.new self.R + o,
+              self.G + o,
+              self.B + o
     end
   end
 
   def -(o)
     case o
     when RGB
-      RGB.new(*(@vector - o.vector))
+      #RGB.new(*(@vector - o.vector))
+      RGB.new self.R - o.R,
+              self.G - o.G,
+              self.B - o.B
     else
-      RGB.new(*(@vector - o))
+      #RGB.new(*(@vector - o))
+      RGB.new self.R - o,
+              self.G - o,
+              self.B - o
     end
   end
 
   def *(o)
     case o
     when RGB
-      @vector.inner_product(o.vector)
+      #@vector.inner_product(o.vector)
+      ip o
     else
-      RGB.new(*(@vector * o))
+      #RGB.new(*(@vector * o))
+      RGB.new self.R * o,
+              self.G * o,
+              self.B * o
     end
   end
 
-  def mag_2
-    self.R ** self.R + self.G ** self.G + self.B ** self.B
+  def ip(o)
+    self.R * o.R + self.G + o.G + self.B * o.B
   end
+
+  def mag_2
+    @mag_2 ||= self.R * self.R + self.G * self.G + self.B * self.B
+  end
+  alias_method :sq, :mag_2
 
   def /(o)
     case o
     when RGB
       RGB.new(*(@vector / o.vector))
     else
-      RGB.new(*(@vector / o))
+      #RGB.new(*(@vector / o))
+      RGB.new self.R / o,
+              self.G / o,
+              self.B / o
     end
   end
 

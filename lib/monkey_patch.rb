@@ -11,7 +11,7 @@ module Enumerable
     n = (size.to_f / cores).ceil
 
     #puts "Before compaction: %.1fMB used" % [`ps -o rss= -p #{$$}`.to_f/1024]
-    GC.compact
+    #GC.compact
     #puts "After compaction: %.1fMB used" % [`ps -o rss= -p #{$$}`.to_f/1024]
 
     Parallel.map each_slice(n).to_a, :in_processes => cores do |group|
@@ -98,7 +98,9 @@ class Matrix
   end
 end
 
-def profile(path="profiling", &block)
+def profile(path="profiling", profile: true, &block)
+  return block.call unless profile
+
   require 'ruby-prof'
   prof = RubyProf::Profile.new
 
@@ -108,5 +110,15 @@ def profile(path="profiling", &block)
 
   printer = RubyProf::MultiPrinter.new result, [:graph_html, :tree]
   printer.print :path => path, :profile => "prof"
+
+  result
+end
+
+def debug(*args)
+  puts(*args) if $debug
+end
+
+def d(*args)
+  p(*args) if $debug
 end
 
