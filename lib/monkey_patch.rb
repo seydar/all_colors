@@ -45,6 +45,13 @@ module Enumerable
     pairs = zip parallel_map(:cores => cores, &block)
     pairs.sort_by(&:last).map(&:first)
   end
+
+  def parallel_min_by(cores: $parallel, &block)
+    return min_by(&block) unless $parallel
+
+    pairs = zip parallel_map(:cores => cores, &block)
+    pairs.min_by(&:last).map(&:first)
+  end
 end
 
 # unfortunate variable shadowing

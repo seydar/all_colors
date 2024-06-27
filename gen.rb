@@ -41,6 +41,8 @@ $debug = opts[:debug]
 opts[:size]  = opts[:size].split("x").map(&:to_i)
 opts[:start] = opts[:start].split(",").map(&:to_i)
 
+# TODO make this so that the original file is loaded first
+# don't use constants because we'll get yelled at for reassigning to them
 if opts[:input]
   load opts[:input]
   opts[:size]      = Specific::SIZE
@@ -108,7 +110,7 @@ profile :profile => opts[:profiling] do
 
   # loop through all colors that we want to place
   colors.size.times do |i|
-  #1000.times do |i|
+  #3.times do |i|
   
     # Debug
     if i % 512 == 0
@@ -121,20 +123,20 @@ profile :profile => opts[:profiling] do
       # Find the best place from the list of available coordinates
       # uses parallel processing, most expensive step
       if available.size > 2000 and opts[:parallel] > 0
-        sorted = available.parallel_sort_by(:cores => opts[:parallel]) do |c|
+        best = available.parallel_min_by(:cores => opts[:parallel]) do |c|
           calc_diff_cache(pixels, caching, c, colors[i])
         end
       else
         # too small, don't parallelize it
-        sorted = available.to_a.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        #sorted = available.to_a.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
       end
       
       #sorted = available.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+      #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
   
-      best = sorted[0]
+      #best = sorted[0]
     end
-    #p(available.map {|c| [c, calc_diff_cache(pixels, caching, c, colors[i])] }.sort_by {|a, b| b })
-    #p best
   
     # Put pixel where it belongs
     pixels[*best]   = colors[i]
@@ -144,13 +146,16 @@ profile :profile => opts[:profiling] do
   
     available.delete best
   
+    ## adjust available list
+    #neighbors(best).each do |neighbor|
+    #  # don't overwrite pixels
+    #  available << neighbor unless pixels[*neighbor]
+    #end
+
     # adjust available list
-    neighbors(best).each do |neighbor|
+    Specific::available(opts[:start], caching, i + 1).each do |neighbor|
       # don't overwrite pixels
       available << neighbor unless pixels[*neighbor]
-      #if pixels[*neighbor]
-      #  puts "uhoh #{neighbor.inspect}"
-      #end
     end
   
     if checkpoints[i]
@@ -168,6 +173,7 @@ profile :profile => opts[:profiling] do
               img[x, y] = ChunkyPNG::Color.rgba rgb[0], rgb[1], rgb[2], 255
             end
           else
+
             rgb = pixels[x, y]
             if rgb
               img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
