@@ -56,6 +56,8 @@ def calc_diff_cache(pixels, caching, coord, c)
   c = c.hue if HSLUV
   hash   = caching[*coord]
 
+  return 0.0 if hash[:size] == 0
+
   first  = hash[:squares] / hash[:size]
   middle = -1 * (c * hash[:sum] * 2 / hash[:size])
   last   = c.sq

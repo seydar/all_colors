@@ -108,6 +108,8 @@ checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1]
 
 profile :profile => opts[:profiling] do
 
+  times = []
+
   # loop through all colors that we want to place
   colors.size.times do |i|
   #3.times do |i|
@@ -115,6 +117,8 @@ profile :profile => opts[:profiling] do
     # Debug
     if i % 512 == 0
       debug "#{"%0.4f" % (100.0 * i / (WIDTH * HEIGHT))}%, queue #{available.size}"
+      debug "avg sort time: #{times.avg}"
+      times = []
     end
   
     if available.size == 0
@@ -129,7 +133,9 @@ profile :profile => opts[:profiling] do
       else
         # too small, don't parallelize it
         #sorted = available.to_a.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        start = Time.now
         best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        times << (Time.now - start)
       end
       
       #sorted = available.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
@@ -166,19 +172,38 @@ profile :profile => opts[:profiling] do
   
       HEIGHT.times do |y|
         WIDTH.times do |x|
-          if HSLUV
-            hsluv = pixels[x, y]
-            if hsluv
-              rgb       = Hsluv.hsluv_to_rgb(*hsluv.vector).map {|c| (255 * c).to_i }
-              img[x, y] = ChunkyPNG::Color.rgba rgb[0], rgb[1], rgb[2], 255
-            end
-          else
+          rgb = pixels[x, y]
+          if rgb
+            img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
+          end
+        end
+      end
 
-            rgb = pixels[x, y]
-            if rgb
-              img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
+      if checkpoints[i] == 29
+
+        open("final.marshal", "w") {|f| f.write Marshal.dump(pixels) }
+
+        # Create circular streaks and then blank them out
+        margin = 5
+        0.step(:to => opts[:size].max, :by => 10) do |radius|
+          circum = Set.new
+          a, b = *opts[:start]
+          (a - radius - 2 *margin .. a + radius + 2 * margin).each do |x|
+            (b - radius - 2 * margin .. b + radius + 2 * margin).each do |y|
+              if (x - a) ** 2 + (y - b) ** 2 <= ((radius + margin) ** 2) &&
+                 (x - a) ** 2 + (y - b) ** 2 >= ((radius - margin) ** 2)
+                circum << [x, y]
+              end
             end
           end
+
+          # pick a random starting point, and delete part of it
+          circum = circum.to_a
+          circum = circum.rotate(rand(circum.size))[0, 3 * circum.size / 4]
+
+          # blank them out
+          circum = circum.filter {|x, y| x < WIDTH && x >= 0 && y < HEIGHT && y >= 0 }
+          circum.each {|pt| img[*pt] = ChunkyPNG::Color.rgba(0, 0, 0, 0) }
         end
       end
   
