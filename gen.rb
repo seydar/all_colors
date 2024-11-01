@@ -153,20 +153,21 @@ profile :profile => opts[:profiling] do
     available.delete best
   
     ## adjust available list
-    #neighbors(best).each do |neighbor|
-    #  # don't overwrite pixels
-    #  available << neighbor unless pixels[*neighbor]
-    #end
-
-    # adjust available list
-    Specific::available(opts[:start], caching, i + 1).each do |neighbor|
+    neighbors(best).each do |neighbor|
       # don't overwrite pixels
       available << neighbor unless pixels[*neighbor]
     end
+
+    # adjust available list
+    #ns = Specific::available(best, caching, i + 1)
+    #ns.each do |neighbor|
+    #  # don't overwrite pixels
+    #  unless pixels[*neighbor]
+    #    available << neighbor
+    #  end
+    #end
   
     if checkpoints[i]
-      #cleaned = remove_coral pixels
-  
       debug "Checkpoint #{checkpoints[i]}"
       img = ChunkyPNG::Image.new WIDTH, HEIGHT, ChunkyPNG::Color::TRANSPARENT
   
@@ -179,33 +180,33 @@ profile :profile => opts[:profiling] do
         end
       end
 
-      if checkpoints[i] == 29
+      #if checkpoints[i] == 29
 
-        open("final.marshal", "w") {|f| f.write Marshal.dump(pixels) }
+      #  open("final.marshal", "w") {|f| f.write Marshal.dump(pixels) }
 
-        # Create circular streaks and then blank them out
-        margin = 5
-        0.step(:to => opts[:size].max, :by => 10) do |radius|
-          circum = Set.new
-          a, b = *opts[:start]
-          (a - radius - 2 *margin .. a + radius + 2 * margin).each do |x|
-            (b - radius - 2 * margin .. b + radius + 2 * margin).each do |y|
-              if (x - a) ** 2 + (y - b) ** 2 <= ((radius + margin) ** 2) &&
-                 (x - a) ** 2 + (y - b) ** 2 >= ((radius - margin) ** 2)
-                circum << [x, y]
-              end
-            end
-          end
+      #  # Create circular streaks and then blank them out
+      #  margin = 5
+      #  0.step(:to => opts[:size].max, :by => 10) do |radius|
+      #    circum = Set.new
+      #    a, b = *opts[:start]
+      #    (a - radius - 2 *margin .. a + radius + 2 * margin).each do |x|
+      #      (b - radius - 2 * margin .. b + radius + 2 * margin).each do |y|
+      #        if (x - a) ** 2 + (y - b) ** 2 <= ((radius + margin) ** 2) &&
+      #           (x - a) ** 2 + (y - b) ** 2 >= ((radius - margin) ** 2)
+      #          circum << [x, y]
+      #        end
+      #      end
+      #    end
 
-          # pick a random starting point, and delete part of it
-          circum = circum.to_a
-          circum = circum.rotate(rand(circum.size))[0, 3 * circum.size / 4]
+      #    # pick a random starting point, and delete part of it
+      #    circum = circum.to_a
+      #    circum = circum.rotate(rand(circum.size))[0, 3 * circum.size / 4]
 
-          # blank them out
-          circum = circum.filter {|x, y| x < WIDTH && x >= 0 && y < HEIGHT && y >= 0 }
-          circum.each {|pt| img[*pt] = ChunkyPNG::Color.rgba(0, 0, 0, 0) }
-        end
-      end
+      #    # blank them out
+      #    circum = circum.filter {|x, y| x < WIDTH && x >= 0 && y < HEIGHT && y >= 0 }
+      #    circum.each {|pt| img[*pt] = ChunkyPNG::Color.rgba(0, 0, 0, 0) }
+      #  end
+      #end
   
       fname = "#{opts[:output]}/checkpoint_#{"%02d" % checkpoints[i]}.png"
       img.save fname, :interlace => true
