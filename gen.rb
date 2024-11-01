@@ -112,7 +112,7 @@ profile :profile => opts[:profiling] do
 
   # loop through all colors that we want to place
   colors.size.times do |i|
-  #3.times do |i|
+  #5.times do |i|
   
     # Debug
     if i % 512 == 0
@@ -143,29 +143,27 @@ profile :profile => opts[:profiling] do
   
       #best = sorted[0]
     end
+
+    #p(available.map {|c| [c, calc_diff_cache(pixels, caching, c, colors[i])] }.sort_by {|a, b| b })
+    #p best
   
     # Put pixel where it belongs
     pixels[*best]   = colors[i]
-    [best, *neighbors(best)].each do |coord|
+    neighbs = Specific::available(best, caching, i + 1)
+
+    [best, *neighbs].each do |coord|
       update_cache caching, coord, colors[i]
     end
   
     available.delete best
-  
-    ## adjust available list
-    neighbors(best).each do |neighbor|
-      # don't overwrite pixels
-      available << neighbor unless pixels[*neighbor]
-    end
 
     # adjust available list
-    #ns = Specific::available(best, caching, i + 1)
-    #ns.each do |neighbor|
-    #  # don't overwrite pixels
-    #  unless pixels[*neighbor]
-    #    available << neighbor
-    #  end
-    #end
+    neighbs.each do |neighbor|
+      # don't overwrite pixels
+      unless pixels[*neighbor]
+        available << neighbor
+      end
+    end
   
     if checkpoints[i]
       debug "Checkpoint #{checkpoints[i]}"

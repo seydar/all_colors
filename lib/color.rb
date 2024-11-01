@@ -44,7 +44,7 @@ class RGB
     case o
     when RGB
       #@vector.inner_product(o.vector)
-      self.vector.zip(o.vector).map {|a, b| a + b }.sum
+      #self.vector.zip(o.vector).map {|a, b| a + b }.sum
       ip o
     else
       #RGB.new(*(@vector * o))
@@ -55,7 +55,9 @@ class RGB
   end
 
   def ip(o)
-    self.R * o.R + self.G + o.G + self.B * o.B
+    self.R * o.R +
+    self.G * o.G +
+    self.B * o.B
   end
 
   def mag_2
