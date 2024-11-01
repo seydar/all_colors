@@ -30,7 +30,7 @@ module Specific
   # higher power = more watercolor (preference for filling in spaces)
   # lower power = more coral (preference for similar colors)
   def distance_weight(size)
-    (9 - size) ** 1.5
+    (9 - size)
   end
 end
 

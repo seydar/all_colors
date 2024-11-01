@@ -41,7 +41,6 @@ $debug = opts[:debug]
 opts[:size]  = opts[:size].split("x").map(&:to_i)
 opts[:start] = opts[:start].split(",").map(&:to_i)
 
-# TODO make this so that the original file is loaded first
 # don't use constants because we'll get yelled at for reassigning to them
 if opts[:input]
   load opts[:input]
@@ -49,7 +48,7 @@ if opts[:input]
   opts[:start]     = Specific::START
   opts[:output]    = Specific::OUTPUT
   opts[:colors]    = Specific::COLORS
-  opts[:profiling] = Specific::PROFILING
+  opts[:profiling] ||= Specific::PROFILING
 else
   require_relative "lib/specific.rb"
 end
@@ -111,7 +110,8 @@ profile :profile => opts[:profiling] do
   times = []
 
   # loop through all colors that we want to place
-  colors.size.times do |i|
+  #colors.size.times do |i|
+  (1 * colors.size / 30).times do |i|
   #5.times do |i|
   
     # Debug

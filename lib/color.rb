@@ -4,11 +4,14 @@ class RGB
   def initialize(r, g, b)
     #@vector = Vector[r, g, b]
     @vector = [r, g, b]
+    @r = r
+    @g = g
+    @b = b
   end
 
-  def R; @vector[0]; end
-  def G; @vector[1]; end
-  def B; @vector[2]; end
+  def R; @r; end
+  def G; @g; end
+  def B; @b; end
 
   def +(o)
     case o
