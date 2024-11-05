@@ -8,7 +8,7 @@ require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
 require_relative 'lib/sorting.rb'
 
-PRNG = Random.new 1337
+PRNG = Random.new 9999
 
 #NUM_COLORS = 32 # 64 # 32
 #WIDTH = 256 # 512 # 256
@@ -110,8 +110,8 @@ profile :profile => opts[:profiling] do
   times = []
 
   # loop through all colors that we want to place
-  #colors.size.times do |i|
-  (1 * colors.size / 30).times do |i|
+  colors.size.times do |i|
+  #(1 * colors.size / 30).times do |i|
   #5.times do |i|
   
     # Debug
@@ -134,7 +134,10 @@ profile :profile => opts[:profiling] do
         # too small, don't parallelize it
         #sorted = available.to_a.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
         start = Time.now
-        best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        best = available.to_a
+                .group_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        best = best[best.keys.min].sample :random => PRNG
         times << (Time.now - start)
       end
       
