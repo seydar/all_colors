@@ -3,10 +3,11 @@ module Specific
 
   HSLUV  = false
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
-  DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
+  OUTPUT = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
   START  = [100, 511]
   SIZE   = [875, 512]
   COLORS = 64
+  PROFILING = false
 
   def order(colors)
     #parts = colors.each_slice(colors.size / 12).to_a
@@ -23,7 +24,7 @@ module Specific
   # higher power = more watercolor (preference for filling in spaces)
   # lower power = more coral (preference for similar colors)
   def distance_weight(size)
-    (9 - size)
+    (9 - size) ** 1.5
   end
 end
 

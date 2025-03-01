@@ -8,7 +8,7 @@ require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
 require_relative 'lib/sorting.rb'
 
-PRNG = Random.new 9999
+PRNG = Random.new 1337
 
 #NUM_COLORS = 32 # 64 # 32
 #WIDTH = 256 # 512 # 256
@@ -30,35 +30,33 @@ EOS
   opt :size, "Size ('WIDTHxHEIGHT') of output", :type => :string, :default => "256x128"
   opt :start, "Starting pixel ('x,y')", :type => :string, :default => "128,64"
   opt :checkpoints, "Number of checkpoint images to make", :type => :integer, :default => 10
-  opt :directory, "Where to write the checkpoint images", :type => :string, :default => "output"
+  opt :output, "Where to write the checkpoint images", :type => :string, :default => "output"
   opt :debug, "Print the debug statements", :type => :boolean
   opt :parallel, "How many cores to use", :type => :integer, :default => 0
   opt :hsluv, "Sort by HSLUV", :type => :boolean, :default => false
   opt :profiling, "Profile the code", :type => :boolean, :default => false
-  opt :output, "File to save the final version as", :type => :string
 end
 
 $debug = opts[:debug]
 opts[:size]  = opts[:size].split("x").map(&:to_i)
 opts[:start] = opts[:start].split(",").map(&:to_i)
 
-# don't use constants because we'll get yelled at for reassigning to them
 if opts[:input]
   load opts[:input]
   opts[:size]      = Specific::SIZE
   opts[:start]     = Specific::START
-  opts[:directory] = Specific::DIRECTORY
+  opts[:output]    = Specific::OUTPUT
   opts[:colors]    = Specific::COLORS
-  opts[:profiling] ||= Specific::PROFILING
+  opts[:profiling] = Specific::PROFILING
 else
   require_relative "lib/specific.rb"
 end
 
 WIDTH, HEIGHT = *opts[:size]
 
-debug "Creating an image of #{opts[:size].inspect} in #{opts[:directory]}"
+debug "Creating an image of #{opts[:size].inspect} in #{opts[:output]}"
 
-FileUtils.mkdir_p opts[:directory]
+FileUtils.mkdir_p opts[:output]
 
 # Create every color once and randomize the order
 # Need to be converted to RGB or something later on
@@ -111,9 +109,8 @@ profile :profile => opts[:profiling] do
   times = []
 
   # loop through all colors that we want to place
-  colors.size.times do |i|
-  #(1 * colors.size / 30).times do |i|
-  #5.times do |i|
+  #colors.size.times do |i|
+  5.times do |i|
   
     # Debug
     if i % 512 == 0
@@ -128,88 +125,70 @@ profile :profile => opts[:profiling] do
       # Find the best place from the list of available coordinates
       # uses parallel processing, most expensive step
       if available.size > 2000 and opts[:parallel] > 0
-        best = available.parallel_min_by(:cores => opts[:parallel]) do |c|
+        sorted = available.parallel_sort_by(:cores => opts[:parallel]) do |c|
           calc_diff_cache(pixels, caching, c, colors[i])
         end
       else
         # too small, don't parallelize it
         #sorted = available.to_a.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
         start = Time.now
-        #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
-        best = available.to_a
-                .group_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
-        best = best[best.keys.min].sample :random => PRNG
+        best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
         times << (Time.now - start)
       end
       
       #sorted = available.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
-      #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
   
       #best = sorted[0]
     end
-
-    #p(available.map {|c| [c, calc_diff_cache(pixels, caching, c, colors[i])] }.sort_by {|a, b| b })
-    #p best
+    p(available.map {|c| [c, calc_diff_cache(pixels, caching, c, colors[i])] }.sort_by {|a, b| b })
+    p best
   
     # Put pixel where it belongs
     pixels[*best]   = colors[i]
-    neighbs = Specific::available(best, caching, i + 1)
-
-    [best, *neighbs].each do |coord|
+    [best, *neighbors(best)].each do |coord|
       update_cache caching, coord, colors[i]
     end
   
     available.delete best
-
+  
     # adjust available list
-    neighbs.each do |neighbor|
+    ns = neighbors(best)
+    neighbors(best).each do |neighbor|
       # don't overwrite pixels
-      unless pixels[*neighbor]
-        available << neighbor
-      end
+      available << neighbor unless pixels[*neighbor]
+      #if pixels[*neighbor]
+      #  puts "uhoh #{neighbor.inspect}"
+      #end
     end
   
     if checkpoints[i]
+      #cleaned = remove_coral pixels
+  
       debug "Checkpoint #{checkpoints[i]}"
       img = ChunkyPNG::Image.new WIDTH, HEIGHT, ChunkyPNG::Color::TRANSPARENT
   
       HEIGHT.times do |y|
         WIDTH.times do |x|
-          rgb = pixels[x, y]
-          if rgb
-            img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
+          if HSLUV
+            hsluv = pixels[x, y]
+            if hsluv
+              rgb       = Hsluv.hsluv_to_rgb(*hsluv.vector).map {|c| (255 * c).to_i }
+              img[x, y] = ChunkyPNG::Color.rgba rgb[0], rgb[1], rgb[2], 255
+            end
+          else
+            rgb = pixels[x, y]
+            if rgb
+              img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
+            end
           end
         end
       end
-
-      fname = "#{opts[:directory]}/checkpoint_#{"%02d" % checkpoints[i]}.png"
-      img.save fname
+  
+      fname = "#{opts[:output]}/checkpoint_#{"%02d" % checkpoints[i]}.png"
+      img.save fname, :interlace => true
       debug "Wrote #{fname}"
     end
   
-  end
-
-  # Add a white border
-  available.each do |coord|
-    pixels[*coord] = RGB.new 255, 255, 255
-  end
-
-  # Print the final output to a fancy filename if desired
-  unless opts[:output].empty?
-    img = ChunkyPNG::Image.new WIDTH, HEIGHT, ChunkyPNG::Color::TRANSPARENT
-    
-    HEIGHT.times do |y|
-      WIDTH.times do |x|
-        rgb = pixels[x, y]
-        if rgb
-          img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
-        end
-      end
-    end
-
-    fname = File.join(opts[:directory], opts[:output])
-    img.save fname
-    debug "Wrote #{fname}"
   end
 
 end

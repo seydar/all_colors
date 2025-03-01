@@ -3,7 +3,7 @@ module Specific
 
   HSLUV  = false
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
-  OUTPUT = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
+  DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
   START  = [350, 511]
   SIZE   = [875, 512]
   COLORS = 64

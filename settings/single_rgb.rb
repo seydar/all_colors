@@ -2,7 +2,7 @@ module Specific
   extend self
 
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
-  OUTPUT = "output/#{filename}_rgb"
+  DIRECTORY = "output/#{filename}_rgb"
   START  = [64, 64]
   SIZE   = [256, 128]
   COLORS = 32

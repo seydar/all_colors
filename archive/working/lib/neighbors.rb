@@ -56,27 +56,24 @@ def calc_diff_cache(pixels, caching, coord, c)
   c = c.hue if HSLUV
   hash   = caching[*coord]
 
-  return 0.0 if hash[:size] == 0
-
   first  = hash[:squares] / hash[:size]
   middle = -1 * (c * hash[:sum] * 2 / hash[:size])
-  last   = c.sq
+  last   = (c * c)
 
-  #(first + middle + last) * Specific::distance_weight(hash[:size])
-  val = (first + middle + last) * Specific::distance_weight(hash[:size])
-  hash[:size] > 4 ? val - hash[:size] : val
+  #(first + middle + last) * (9 - hash[:size]) ** 1
+  (first + middle + last) * Specific::distance_weight(hash[:size]) #(9 - hash[:size]) ** 1
 end
 
 def update_cache(caching, coord, c)
   if HSLUV
     c = c.hue
     hash = caching[*coord]
-    hash[:squares] += c.sq
+    hash[:squares] += (c * c)
     hash[:sum]     += c
     hash[:size]    += 1
   else
     hash = caching[*coord]
-    hash[:squares] += c.sq
+    hash[:squares] += (c * c)
     hash[:sum]     += c#.vector
     hash[:size]    += 1
   end

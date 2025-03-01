@@ -3,10 +3,10 @@ module Specific
 
   HSLUV  = false
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
-  OUTPUT = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
-  START  = [256, 256]
+  DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
+  START  = [150, 400]
   SIZE   = [512, 512]
-  COLORS = 32
+  COLORS = 36
   PROFILING = false
 
   ORANGE_ICECREAM = ["#C024C0",
@@ -38,7 +38,7 @@ module Specific
                   "#f1c453",
                   "#f29e4c"]
 
-  PALETTE = GREEN_ORANGE
+  PALETTE = GREEN_ORANGE + ORANGE_ICECREAM
 
   def available(coord, caching, i=nil)
     x, y   = *coord
