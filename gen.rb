@@ -8,7 +8,7 @@ require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
 require_relative 'lib/sorting.rb'
 
-PRNG = Random.new 9999
+PRNG = Random.new 783
 
 #NUM_COLORS = 32 # 64 # 32
 #WIDTH = 256 # 512 # 256
@@ -35,7 +35,7 @@ EOS
   opt :parallel, "How many cores to use", :type => :integer, :default => 0
   opt :hsluv, "Sort by HSLUV", :type => :boolean, :default => false
   opt :profiling, "Profile the code", :type => :boolean, :default => false
-  opt :output, "File to save the final version as", :type => :string
+  opt :output, "File to save the final version as", :type => :string, :default => ""
 end
 
 $debug = opts[:debug]
