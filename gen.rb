@@ -120,7 +120,7 @@ checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1]
 profile :profile => opts[:profiling] do
 
   times = []
-  total = 0
+  cores = nil
 
   # loop through all colors that we want to place
   colors.size.times do |i|
@@ -131,7 +131,7 @@ profile :profile => opts[:profiling] do
     if i % 512 == 0
       debug "#{"%0.4f" % (100.0 * i / (WIDTH * HEIGHT))}%, queue #{available.size}"
       debug "avg sort time: #{times.avg}"
-      puts "cores: #{total.to_i}" if !times.avg.nan? and available.size > 12000
+      debug "cores: #{cores}" if cores
       times = []
     end
   
