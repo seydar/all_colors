@@ -53,10 +53,12 @@ end
 
 # This is smooth, the above is not, for some reason
 def calc_diff_cache(pixels, caching, coord, c)
-  c = c.hue if HSLUV
   hash   = caching[*coord]
+  size   = hash[:size]
 
-  return 0.0 if hash[:size] == 0
+  return 0.0 if size == 0
+
+  c = c.hue if HSLUV
 
   #first  = hash[:squares] / hash[:size]
   #middle = -1 * (c * hash[:sum] * 2 / hash[:size])
@@ -67,8 +69,8 @@ def calc_diff_cache(pixels, caching, coord, c)
   last   = c.sq
 
   #(first + middle + last) * Specific::distance_weight(hash[:size])
-  val = first + (middle + last) * Specific::distance_weight(hash[:size])
-  hash[:size] > 4 ? val - hash[:size] : val
+  val = first + (middle + last) * Specific::distance_weight(size)
+  size > 4 ? val - size : val
 end
 
 def update_cache(caching, coord, c)
