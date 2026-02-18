@@ -54,12 +54,12 @@ module Enumerable
   end
 
   def parallel_group_by(cores: $parallel, &block)
-    return group_by(&block) unless $parallel
+    return group_by(*block) unless $parallel
 
-    pairs = zip parallel_map(:cores => cores, &block)
-    vals  = Hash.new {|h, k| h[k] = [] }
-    pairs.each {|(l, r)| vals[r] << l }
-    vals
+    groups = Hash.new {|h, k| h[k] = [] }
+    pairs  = zip parallel_map(:cores => cores, &block)
+    pairs.each {|v, group| groups[group] << v }
+    groups
   end
 end
 

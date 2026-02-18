@@ -24,7 +24,7 @@ module Specific
     #         parts[2..4] +
     #         parts[7..9]
     #colors.flatten
-    colors.reverse
+    colors
   end
 
   # higher power = more watercolor (preference for filling in spaces)
