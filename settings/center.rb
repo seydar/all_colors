@@ -3,10 +3,10 @@ module Specific
 
   HSLUV  = false
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
-  DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}_large"
+  DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
   START  = [1000, 1000]
   SIZE   = [2000, 2000]
-  COLORS = 76
+  COLORS = 128
   PROFILING = false
 
   def available(coord, caching, i=nil)

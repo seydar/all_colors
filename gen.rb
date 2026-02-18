@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby --yjit
+#!/usr/bin/env ruby
 require 'fileutils'
 require 'optimist'
 require 'hsluv'
@@ -145,7 +145,9 @@ profile :profile => opts[:profiling] do
         start = Time.now
         #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
         best = available.to_a
-                .parallel_group_by(:cores => opts[:parallel]) {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+                .parallel_group_by(:cores => opts[:parallel]) do |c|
+                  calc_diff_cache(pixels, caching, c, colors[i])
+                end
         best = best[best.keys.min].sample :random => PRNG
         times << (Time.now - start)
       else
