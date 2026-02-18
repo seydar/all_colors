@@ -67,7 +67,7 @@ def calc_diff_cache(pixels, caching, coord, c)
   last   = c.sq
 
   #(first + middle + last) * Specific::distance_weight(hash[:size])
-  val = (first + middle + last) * Specific::distance_weight(hash[:size])
+  val = first + (middle + last) * Specific::distance_weight(hash[:size])
   hash[:size] > 4 ? val - hash[:size] : val
 end
 
@@ -78,14 +78,14 @@ def update_cache(caching, coord, c)
     hash[:squares] += c.sq
     hash[:sum]     += c
     hash[:size]    += 1
-    hash[:first]    = hash[:squares] / hash[:size]
+    hash[:first]    = Specific::distance_weight(hash[:size]) * hash[:squares] / hash[:size]
     hash[:middle]   = -1 * hash[:sum] * 2 / hash[:size]
   else
     hash = caching[*coord]
     hash[:squares] += c.sq
     hash[:sum]     += c#.vector
     hash[:size]    += 1
-    hash[:first]    = hash[:squares] / hash[:size]
+    hash[:first]    = Specific::distance_weight(hash[:size]) * hash[:squares] / hash[:size]
     hash[:middle]   = (hash[:sum] * 2 / hash[:size]) * -1
   end
 end
