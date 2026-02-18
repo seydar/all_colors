@@ -95,9 +95,12 @@ HSLUV = opts[:hsluv] || Specific::HSLUV
 if HSLUV
   colors = transform(colors, :to => :hsluv).sort_by {|c| c.vector.to_a }
 else
-  colors = colors.map {|c| RGB.new(*(c * 255).vector.map(&:round)) }
+  colors = colors.map do |c|
+    RGB.new(*(c * 255).vector.map {|f| f.round.to_i })
+  end
   colors = colors.sort_by {|rgb| rgb.hue }
 end
+
 
 colors = Specific::order colors
 
@@ -146,7 +149,7 @@ profile :profile => opts[:profiling] do
         start = Time.now
         best = available.to_a
                 .parallel_group_by(:cores => cores) do |c|
-                  calc_diff_cache(pixels, caching, c, colors[i])
+                  calc_diff_cache(caching[*c], colors[i])
                 end
         best = best[best.keys.min].sample :random => PRNG
         times << (Time.now - start)
@@ -154,7 +157,7 @@ profile :profile => opts[:profiling] do
         # too small, don't parallelize it
         start = Time.now
         best = available.to_a
-                .group_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+                .group_by {|c| calc_diff_cache(caching[*c], colors[i]) }
         times << (Time.now - start)
         best = best[best.keys.min].sample :random => PRNG
       end
@@ -194,7 +197,7 @@ profile :profile => opts[:profiling] do
         WIDTH.times do |x|
           rgb = pixels[x, y]
           if rgb
-            img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
+            img[x, y] = ChunkyPNG::Color.rgba rgb.R.to_i, rgb.G.to_i, rgb.B.to_i, 255
           end
         end
       end
@@ -219,7 +222,7 @@ profile :profile => opts[:profiling] do
       WIDTH.times do |x|
         rgb = pixels[x, y]
         if rgb
-          img[x, y] = ChunkyPNG::Color.rgba rgb.R, rgb.G, rgb.B, 255
+          img[x, y] = ChunkyPNG::Color.rgba rgb.R.to_i, rgb.G.to_i, rgb.B.to_i, 255
         end
       end
     end

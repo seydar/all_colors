@@ -52,8 +52,7 @@ end
 #end
 
 # This is smooth, the above is not, for some reason
-def calc_diff_cache(pixels, caching, coord, c)
-  hash   = caching[*coord]
+def calc_diff_cache(hash, c)
   size, first, middle = hash[:details]
 
   return 0.0 if size == 0

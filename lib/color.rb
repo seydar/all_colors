@@ -6,9 +6,9 @@ class RGB
   def initialize(r, g, b)
     @vector = Numo::NArray[r, g, b]
     #@vector = [r, g, b]
-    @r = r.to_i
-    @g = g.to_i
-    @b = b.to_i
+    @r = r
+    @g = g
+    @b = b
   end
 
   def R; @r; end
@@ -48,8 +48,8 @@ class RGB
   def *(o)
     case o
     when RGB
-      @vector.inner(o.vector)
-      #ip o
+      #@vector.inner(o.vector)
+      ip o
     else
       #RGB.new(*(@vector * o))
       RGB.new self.R * o,

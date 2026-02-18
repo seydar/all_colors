@@ -22,7 +22,7 @@ module Specific
     # Contrast ratio
     colors.each_slice(colors.size / 4).map do |cs|
       cs.sort {|c1, c2| contrast_ratio c1, c2 }
-    end.flatten
+    end.reverse.flatten.reverse
     
     #colors.sort {|c1, c2| contrast_ratio c1, c2 }
 
