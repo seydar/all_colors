@@ -54,7 +54,7 @@ end
 # This is smooth, the above is not, for some reason
 def calc_diff_cache(pixels, caching, coord, c)
   hash   = caching[*coord]
-  size   = hash[:size]
+  size, first, middle = hash[:details]
 
   return 0.0 if size == 0
 
@@ -64,8 +64,9 @@ def calc_diff_cache(pixels, caching, coord, c)
   #middle = -1 * (c * hash[:sum] * 2 / hash[:size])
   #last   = c.sq
 
-  first  = hash[:first]
-  middle = c * hash[:middle]
+  #first  = hash[:first]
+  #middle = c * hash[:middle]
+  middle = c * middle
   last   = c.sq
 
   #(first + middle + last) * Specific::distance_weight(hash[:size])
@@ -82,6 +83,7 @@ def update_cache(caching, coord, c)
     hash[:size]    += 1
     hash[:first]    = Specific::distance_weight(hash[:size]) * hash[:squares] / hash[:size]
     hash[:middle]   = -1 * hash[:sum] * 2 / hash[:size]
+    hash[:details] = [hash[:size], hash[:first], hash[:middle]]
   else
     hash = caching[*coord]
     hash[:squares] += c.sq
@@ -89,6 +91,7 @@ def update_cache(caching, coord, c)
     hash[:size]    += 1
     hash[:first]    = Specific::distance_weight(hash[:size]) * hash[:squares] / hash[:size]
     hash[:middle]   = (hash[:sum] * 2 / hash[:size]) * -1
+    hash[:details] = [hash[:size], hash[:first], hash[:middle]]
   end
 end
 
