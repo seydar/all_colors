@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby --yjit
+#!/usr/bin/env ruby
 require 'fileutils'
 require 'optimist'
 require 'hsluv'
@@ -128,9 +128,15 @@ profile :profile => opts[:profiling] do
       # Find the best place from the list of available coordinates
       # uses parallel processing, most expensive step
       if available.size > 2000 and opts[:parallel] > 0
-        best = available.parallel_min_by(:cores => opts[:parallel]) do |c|
-          calc_diff_cache(pixels, caching, c, colors[i])
-        end
+        #best = available.parallel_min_by(:cores => opts[:parallel]) do |c|
+        #  calc_diff_cache(pixels, caching, c, colors[i])
+        #end
+
+        best = available.to_a
+                .parallel_group_by(:cores => opts[:parallel]) do |c|
+                  calc_diff_cache(pixels, caching, c, colors[i])
+                end
+        best = best[best.keys.min].sample :random => PRNG
       else
         # too small, don't parallelize it
         #sorted = available.to_a.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
