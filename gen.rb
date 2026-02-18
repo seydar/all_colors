@@ -132,6 +132,7 @@ profile :profile => opts[:profiling] do
       debug "#{"%0.4f" % (100.0 * i / (WIDTH * HEIGHT))}%, queue #{available.size}"
       debug "avg sort time: #{times.avg}"
       total = times.avg * 512
+      puts "cores: #{total / 2}.to_i"
       times = []
     end
   
@@ -140,8 +141,8 @@ profile :profile => opts[:profiling] do
     else
       # Find the best place from the list of available coordinates
       # uses parallel processing, most expensive step
-      if available.size > 12000 and opts[:parallel] > 0
-        cores = [opts[:parallal], total / 2].min
+      if available.size > 12000 and opts[:parallel] > 0 and (total / 2).to_i > 1
+        cores = [opts[:parallel], (total / 2).to_i].min
 
         start = Time.now
         best = available.to_a
