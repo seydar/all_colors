@@ -1,12 +1,14 @@
+require 'numo/narray'
+
 class RGB
   attr_accessor :vector
 
   def initialize(r, g, b)
-    #@vector = Vector[r, g, b]
-    @vector = [r, g, b]
-    @r = r
-    @g = g
-    @b = b
+    @vector = Numo::NArray[r, g, b]
+    #@vector = [r, g, b]
+    @r = r.to_i
+    @g = g.to_i
+    @b = b.to_i
   end
 
   def R; @r; end
@@ -46,9 +48,8 @@ class RGB
   def *(o)
     case o
     when RGB
-      #@vector.inner_product(o.vector)
-      #self.vector.zip(o.vector).map {|a, b| a + b }.sum
-      ip o
+      @vector.inner(o.vector)
+      #ip o
     else
       #RGB.new(*(@vector * o))
       RGB.new self.R * o,

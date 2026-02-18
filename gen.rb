@@ -8,7 +8,7 @@ require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
 require_relative 'lib/sorting.rb'
 
-PRNG = Random.new 783
+PRNG = Random.new 1138
 
 #NUM_COLORS = 32 # 64 # 32
 #WIDTH = 256 # 512 # 256
@@ -152,13 +152,11 @@ profile :profile => opts[:profiling] do
         times << (Time.now - start)
       else
         # too small, don't parallelize it
-        #sorted = available.to_a.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
         start = Time.now
-        #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
         best = available.to_a
                 .group_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
-        best = best[best.keys.min].sample :random => PRNG
         times << (Time.now - start)
+        best = best[best.keys.min].sample :random => PRNG
       end
       
       #sorted = available.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
