@@ -61,6 +61,7 @@ def calc_diff_cache(pixels, caching, coord, c)
   #first  = hash[:squares] / hash[:size]
   #middle = -1 * (c * hash[:sum] * 2 / hash[:size])
   #last   = c.sq
+
   first  = hash[:first]
   middle = c * hash[:middle]
   last   = c.sq
@@ -85,7 +86,7 @@ def update_cache(caching, coord, c)
     hash[:sum]     += c#.vector
     hash[:size]    += 1
     hash[:first]    = hash[:squares] / hash[:size]
-    hash[:middle]   = -1 * hash[:sum] * 2 / hash[:size]
+    hash[:middle]   = (hash[:sum] * 2 / hash[:size]) * -1
   end
 end
 

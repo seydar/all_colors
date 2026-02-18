@@ -1,5 +1,3 @@
-require 'rumale/decomposition/pca'
-
 module Specific
   extend self
 

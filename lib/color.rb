@@ -57,6 +57,7 @@ class RGB
     end
   end
 
+  # inner product
   def ip(o)
     self.R * o.R +
     self.G * o.G +

@@ -120,6 +120,7 @@ checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1]
 profile :profile => opts[:profiling] do
 
   times = []
+  total = 0
 
   # loop through all colors that we want to place
   colors.size.times do |i|
@@ -130,6 +131,7 @@ profile :profile => opts[:profiling] do
     if i % 512 == 0
       debug "#{"%0.4f" % (100.0 * i / (WIDTH * HEIGHT))}%, queue #{available.size}"
       debug "avg sort time: #{times.avg}"
+      total = times.avg * 512
       times = []
     end
   
@@ -138,14 +140,12 @@ profile :profile => opts[:profiling] do
     else
       # Find the best place from the list of available coordinates
       # uses parallel processing, most expensive step
-      if available.size > 30000 and opts[:parallel] > 0
-        #best = available.parallel_min_by(:cores => opts[:parallel]) do |c|
-        #  calc_diff_cache(pixels, caching, c, colors[i])
-        #end
+      if available.size > 12000 and opts[:parallel] > 0
+        cores = [opts[:parallal], total / 2].min
+
         start = Time.now
-        #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
         best = available.to_a
-                .parallel_group_by(:cores => opts[:parallel]) do |c|
+                .parallel_group_by(:cores => cores) do |c|
                   calc_diff_cache(pixels, caching, c, colors[i])
                 end
         best = best[best.keys.min].sample :random => PRNG
