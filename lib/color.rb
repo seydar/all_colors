@@ -104,6 +104,42 @@ class RGB
     #  hue * 60
     #end
   end
+
+  def relative_luminance
+    return @rel_lum if @rel_lum
+
+    r = self.R / 255.0
+    g = self.G / 255.0
+    b = self.B / 255.0
+
+    # some sources use 0.04045 as the dividing line instead of 0.03928
+    r = r <= 0.03928 ? r / 12.92 : ((r + 0.055) / 1.055) ** 2.4
+    g = g <= 0.03928 ? g / 12.92 : ((g + 0.055) / 1.055) ** 2.4
+    b = b <= 0.03928 ? b / 12.92 : ((b + 0.055) / 1.055) ** 2.4
+
+    @rel_lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  end
+
+  # perceived lightness
+  def l_star
+    y = relative_luminance
+
+    if y <= 0.008856
+      y * 903.3
+    else
+      y ** (1/3.0) * 116 - 16
+    end
+  end
+
+  def chromaticity
+    [self.R / (255 * 3.0), self.G / (255 * 3.0), self.B / (255 * 3.0)]
+  end
+
+  def Z
+    self.B
+  end
+
+  
 end
 
 

@@ -52,6 +52,15 @@ module Enumerable
     pairs = zip parallel_map(:cores => cores, &block)
     pairs.min_by(&:last).map(&:first)
   end
+
+  def parallel_group_by(cores: $parallel, &block)
+    return group_by(*block) unless $parallel
+
+    groups = Hash.new {|h, k| h[k] = [] }
+    pairs  = zip parallel_map(:cores => cores, &block)
+    pairs.each {|v, group| groups[group] << v }
+    groups
+  end
 end
 
 # unfortunate variable shadowing

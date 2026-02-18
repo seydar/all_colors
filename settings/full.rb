@@ -4,9 +4,9 @@ module Specific
   HSLUV  = false
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
   DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
-  START  = [150, 150]
-  SIZE   = [1900, 200]
-  COLORS = 72
+  START  = [1500, 811]
+  SIZE   = [4096, 4096]
+  COLORS = 256
   PROFILING = false
 
   def available(coord, caching, i=nil)
@@ -20,9 +20,9 @@ module Specific
 
     #colors = parts[0..1] +
     #         parts[5..6] +
+    #         parts[10..11] +
     #         parts[2..4] +
-    #         parts[7..9] +
-    #         parts[10..11]
+    #         parts[7..9]
     #colors.flatten
     colors
   end

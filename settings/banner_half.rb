@@ -5,8 +5,8 @@ module Specific
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
   DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}"
   START  = [150, 150]
-  SIZE   = [1900, 200]
-  COLORS = 72
+  SIZE   = [900, 200]
+  COLORS = 56
   PROFILING = false
 
   def available(coord, caching, i=nil)

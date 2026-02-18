@@ -3,10 +3,10 @@ module Specific
 
   HSLUV  = false
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
-  DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}_reverse_2"
-  START  = [500, 500]
-  SIZE   = [1000, 1000]
-  COLORS = 64
+  DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}_large"
+  START  = [1000, 1000]
+  SIZE   = [2000, 2000]
+  COLORS = 76
   PROFILING = false
 
   def available(coord, caching, i=nil)
@@ -24,7 +24,7 @@ module Specific
     #         parts[2..4] +
     #         parts[7..9]
     #colors.flatten
-    colors.reverse
+    colors
   end
 
   # higher power = more watercolor (preference for filling in spaces)

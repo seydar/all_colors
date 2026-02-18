@@ -60,6 +60,17 @@ debug "Creating an image of #{opts[:size].inspect} in #{opts[:directory]}"
 
 FileUtils.mkdir_p opts[:directory]
 
+run_id = (rand * 100_000).to_i
+opts[:output] = "#{run_id}.png"
+
+if opts[:input]
+  FileUtils.cp opts[:input], File.join(opts[:directory], "#{run_id}.rb")
+else
+  open(File.join(opts[:directory], "#{run_id}.yaml")) do |f|
+    f.write YAML.dump(opts)
+  end
+end
+
 # Create every color once and randomize the order
 # Need to be converted to RGB or something later on
 colors = []
@@ -97,7 +108,7 @@ pixels  = Matrix.build(WIDTH, HEIGHT) {}
 if HSLUV
   caching = Matrix.build(WIDTH, HEIGHT) { {:squares => 0.0, :sum => 0.0, :size => 0} }
 else
-  caching = Matrix.build(WIDTH, HEIGHT) { {:squares => 0.0, :sum => RGB.new(0.0, 0.0, 0.0), :size => 0} }
+  caching = Matrix.build(WIDTH, HEIGHT) { {:squares => 0.0, :sum => RGB.new(0.0, 0.0, 0.0), :size => 0, :first => 0.0, :middle => 0.0} }
 end
 
 available = Set.new
@@ -127,10 +138,16 @@ profile :profile => opts[:profiling] do
     else
       # Find the best place from the list of available coordinates
       # uses parallel processing, most expensive step
-      if available.size > 2000 and opts[:parallel] > 0
-        best = available.parallel_min_by(:cores => opts[:parallel]) do |c|
-          calc_diff_cache(pixels, caching, c, colors[i])
-        end
+      if available.size > 30000 and opts[:parallel] > 0
+        #best = available.parallel_min_by(:cores => opts[:parallel]) do |c|
+        #  calc_diff_cache(pixels, caching, c, colors[i])
+        #end
+        start = Time.now
+        #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        best = available.to_a
+                .parallel_group_by(:cores => opts[:parallel]) {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
+        best = best[best.keys.min].sample :random => PRNG
+        times << (Time.now - start)
       else
         # too small, don't parallelize it
         #sorted = available.to_a.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
@@ -182,7 +199,7 @@ profile :profile => opts[:profiling] do
         end
       end
 
-      fname = "#{opts[:directory]}/checkpoint_#{"%02d" % checkpoints[i]}.png"
+      fname = "#{opts[:directory]}/checkpoint_#{run_id}_#{"%02d" % checkpoints[i]}.png"
       img.save fname
       debug "Wrote #{fname}"
     end
