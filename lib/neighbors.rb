@@ -75,24 +75,14 @@ def calc_diff_cache(pixels, caching, coord, c)
 end
 
 def update_cache(caching, coord, c)
-  if HSLUV
-    c = c.hue
-    hash = caching[*coord]
-    hash[:squares] += c.sq
-    hash[:sum]     += c
-    hash[:size]    += 1
-    hash[:first]    = Specific::distance_weight(hash[:size]) * hash[:squares] / hash[:size]
-    hash[:middle]   = -1 * hash[:sum] * 2 / hash[:size]
-    hash[:details] = [hash[:size], hash[:first], hash[:middle]]
-  else
-    hash = caching[*coord]
-    hash[:squares] += c.sq
-    hash[:sum]     += c#.vector
-    hash[:size]    += 1
-    hash[:first]    = Specific::distance_weight(hash[:size]) * hash[:squares] / hash[:size]
-    hash[:middle]   = (hash[:sum] * 2 / hash[:size]) * -1
-    hash[:details] = [hash[:size], hash[:first], hash[:middle]]
-  end
+  c = c.hue if HSLUV
+  hash = caching[*coord]
+  hash[:squares] += c.sq
+  hash[:sum]     += c#.vector
+  hash[:size]    += 1
+  first           = Specific::distance_weight(hash[:size]) * hash[:squares] / hash[:size]
+  middle          = (hash[:sum] * 2 / hash[:size]) * -1
+  hash[:details]  = [hash[:size], first, middle]
 end
 
 

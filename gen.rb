@@ -89,7 +89,7 @@ end
 
 raise "`colors.size` (#{colors.size}) must <= WIDTH * HEIGHT (#{WIDTH * HEIGHT})" unless colors.size <= WIDTH * HEIGHT
 
-HSLUV = opts[:hsluv] || Specific::HSLUV #true#false
+HSLUV = opts[:hsluv] || Specific::HSLUV
 
 
 if HSLUV
