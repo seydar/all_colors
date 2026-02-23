@@ -132,6 +132,7 @@ end
 
 def debug(*args)
   puts(*args) if $debug
+  STDOUT.flush
 end
 
 def d(*args)

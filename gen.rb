@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env -S ruby --enable-yjit
 require 'fileutils'
 require 'optimist'
 require 'hsluv'
@@ -8,7 +8,7 @@ require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
 require_relative 'lib/sorting.rb'
 
-PRNG = Random.new 1138
+PRNG = Random.new 603
 
 #NUM_COLORS = 32 # 64 # 32
 #WIDTH = 256 # 512 # 256
