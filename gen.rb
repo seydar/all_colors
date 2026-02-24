@@ -151,10 +151,10 @@ if HSLUV
   caching = Matrix.build(WIDTH, HEIGHT) { {:squares => 0.0, :sum => 0.0, :size => 0} }
 else
   #caching = Matrix.build(WIDTH, HEIGHT) { {:squares => 0.0, :sum => RGB.new(0.0, 0.0, 0.0), :size => 0} }
-  caching = Cache.new { {:squares => 0.0, :sum => RGB.new(0.0, 0.0, 0.0), :size => 0} }
+  #caching = Cache.new { {:squares => 0.0, :sum => RGB.new(0.0, 0.0, 0.0), :size => 0} }
 
   # size, squares, first, middle, r, g, b
-  caching2 = Numo::DFloat.zeros(WIDTH * HEIGHT, 10)
+  caching = Numo::DFloat.zeros(WIDTH * HEIGHT, 10)
 end
 
 available = Set.new
@@ -189,52 +189,33 @@ profile :profile => opts[:profiling] do
     else
       # Find the best place from the list of available coordinates
       ##
-      best = available.to_a
-                      .group_by {|c| calc_diff_cache(caching[*c], color) }
-      best = best[best.keys.min].sample :random => PRNG
-      
       start = Time.now
 
       saatavillat = available.to_a
 
-      avails = caching2[saatavillat.map {|(x, y)| x * WIDTH + y }, false]
+      avails = caching[saatavillat.map {|(x, y)| x * WIDTH + y }, false]
 
       scores = calc_diff_vectorized(avails, color)
-      puts "scores: #{scores.inspect}"
       poss   = scores <= scores.min
-      puts "poss: #{poss.inspect}"
       ixs    = poss.to_a.each_index.select {|i| poss[i] == 1 }
-      puts "ixs: #{ixs.inspect}"
       best2   = saatavillat[ixs.sample :random => PRNG]
-      puts "best: #{best2.inspect}"
       
       times << (Time.now - start)
     end
 
-    p best
-    p best2
-    best = best2
-
     # Put pixel where it belongs
     pixels[*best]   = color
-    neighbs = Specific::available(best, caching, i + 1)
- 
-    [best, *neighbs].each do |coord|
-      update_cache caching, coord, color
-    end
-  
-    available.delete best
-
 
     neighbs2 = Specific::available(best2, caching, i + 1)
+
     neigh_ixs = [best2, *neighbs2].map do |coord|
       coord[0] * WIDTH + coord[1]
     end
 
-    neighbors = caching2[neigh_ixs, false]
+    neighbors = caching[neigh_ixs, false]
     update_cache_vec neighbors, color
 
-    #available.delete best2
+    available.delete best
 
     # adjust available list
     neighbs.each do |neighbor|
