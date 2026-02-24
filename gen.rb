@@ -11,7 +11,7 @@ require_relative 'lib/sorting.rb'
 require 'numo/narray'
 require 'pry'
 
-PRNG = Random.new 1138
+PRNG = Random.new rand #1138
 
 #NUM_COLORS = 32 # 64 # 32
 #WIDTH = 256 # 512 # 256
@@ -142,6 +142,28 @@ class Cache
   end
 end
 
+def get_indices(poss)
+  #poss.to_a.each_index.select {|i| poss[i] == 1 }
+end
+
+def get_best_score(scores, saatavillat)
+  poss   = scores <= scores.min
+  ixs    = poss.eq(1).where.to_a
+  best   = saatavillat[ixs.sample :random => PRNG]
+end
+
+def update_neighbors(best, caching, color)
+  neighbs = Specific::available(best, caching, i + 1)
+
+  neigh_ixs = [best, *neighbs].map do |coord|
+    coord[1] * WIDTH + coord[0]
+  end
+
+  neighbors = caching[neigh_ixs, false]
+  update_cache_vec neighbors, color
+end
+
+
 
 # Temporary place to do work instead of writing to bitmap
 #pixels  = Matrix.build(WIDTH, HEIGHT) {}
@@ -169,6 +191,8 @@ profile :profile => opts[:profiling] do
   times = []
   cores = nil
 
+  debug "colors loaded"
+  debug "running until #{round(100 * (opts[:colors] ** 3) / (WIDTH.to_f * HEIGHT), 5)}%"
 
   #colors.size.times do |i|
   i = 0
@@ -185,7 +209,6 @@ profile :profile => opts[:profiling] do
   
     if available.size == 0
       best = opts[:start]
-      best2 = best
     else
       # Find the best place from the list of available coordinates
       ##
@@ -193,12 +216,10 @@ profile :profile => opts[:profiling] do
 
       saatavillat = available.to_a
 
-      avails = caching[saatavillat.map {|(x, y)| x * WIDTH + y }, false]
+      avails = caching[saatavillat.map {|(x, y)| y * WIDTH + x }, false]
 
       scores = calc_diff_vectorized(avails, color)
-      poss   = scores <= scores.min
-      ixs    = poss.to_a.each_index.select {|i| poss[i] == 1 }
-      best2   = saatavillat[ixs.sample :random => PRNG]
+      best   = get_best_score scores, saatavillat
       
       times << (Time.now - start)
     end
@@ -206,14 +227,7 @@ profile :profile => opts[:profiling] do
     # Put pixel where it belongs
     pixels[*best]   = color
 
-    neighbs2 = Specific::available(best2, caching, i + 1)
-
-    neigh_ixs = [best2, *neighbs2].map do |coord|
-      coord[0] * WIDTH + coord[1]
-    end
-
-    neighbors = caching[neigh_ixs, false]
-    update_cache_vec neighbors, color
+    update_neighbors best, caching, color
 
     available.delete best
 
