@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env -S ruby --disable-yjit
 require 'fileutils'
 require 'optimist'
 require 'hsluv'
@@ -7,6 +7,9 @@ require_relative 'lib/color.rb'
 require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
 require_relative 'lib/sorting.rb'
+
+require 'numo/narray'
+require 'pry'
 
 PRNG = Random.new 1138
 
@@ -71,64 +74,106 @@ else
   end
 end
 
-# Create every color once and randomize the order
-# Need to be converted to RGB or something later on
-colors = []
+def scope
+  yield
+end
 
-# RGB
-opts[:colors].times do |r|
-  r = ((r / opts[:colors].to_f))
-  opts[:colors].times do |g|
-    g = ((g / opts[:colors].to_f))
-    opts[:colors].times do |b|
-      b = ((b / opts[:colors].to_f))
-      colors << RGB.new(r, g, b)
+
+# Create a new scope for the colors variable so that it can be GCed
+scope do
+  
+  # Create every color once and randomize the order
+  # Need to be converted to RGB or something later on
+  colors = []
+  
+  # RGB
+  opts[:colors].times do |r|
+    r = ((r / opts[:colors].to_f))
+    opts[:colors].times do |g|
+      g = ((g / opts[:colors].to_f))
+      opts[:colors].times do |b|
+        b = ((b / opts[:colors].to_f))
+        colors << RGB.new(r, g, b)
+      end
+    end
+  end
+  
+  raise "`colors.size` (#{colors.size}) must <= WIDTH * HEIGHT (#{WIDTH * HEIGHT})" unless colors.size <= WIDTH * HEIGHT
+  
+  HSLUV = opts[:hsluv] || Specific::HSLUV
+  
+  
+  if HSLUV
+    colors = transform(colors, :to => :hsluv).sort_by {|c| c.vector.to_a }
+  else
+    colors = colors.map do |c|
+      RGB.new(*(c * 255).vector.map {|f| f.round.to_i })
+    end
+    colors = colors.sort_by {|rgb| rgb.hue }
+  end
+  
+  
+  colors = Specific::order colors
+
+  open "/tmp/colors.txt", "w" do |f|
+    colors.each do |c|
+      f.puts Marshal.dump(c.vector)
     end
   end
 end
 
-raise "`colors.size` (#{colors.size}) must <= WIDTH * HEIGHT (#{WIDTH * HEIGHT})" unless colors.size <= WIDTH * HEIGHT
+GC.start
 
-HSLUV = opts[:hsluv] || Specific::HSLUV
-
-
-if HSLUV
-  colors = transform(colors, :to => :hsluv).sort_by {|c| c.vector.to_a }
-else
-  colors = colors.map do |c|
-    RGB.new(*(c * 255).vector.map {|f| f.round.to_i })
+class Cache
+  def initialize(&blk)
+    @cache = Hash.new do |h, k|
+      h[k] = Hash.new do |h_, k_|
+        h_[k_] = blk.call
+      end
+    end
   end
-  colors = colors.sort_by {|rgb| rgb.hue }
+
+  def [](i, j)
+    @cache[i][j]
+  end
+
+  def []=(i, j, value)
+    @cache[i][j] = value
+  end
 end
 
 
-colors = Specific::order colors
-
-
 # Temporary place to do work instead of writing to bitmap
-pixels  = Matrix.build(WIDTH, HEIGHT) {}
+#pixels  = Matrix.build(WIDTH, HEIGHT) {}
+pixels = Cache.new {}
 
 if HSLUV
   caching = Matrix.build(WIDTH, HEIGHT) { {:squares => 0.0, :sum => 0.0, :size => 0} }
 else
-  caching = Matrix.build(WIDTH, HEIGHT) { {:squares => 0.0, :sum => RGB.new(0.0, 0.0, 0.0), :size => 0, :first => 0.0, :middle => 0.0} }
+  #caching = Matrix.build(WIDTH, HEIGHT) { {:squares => 0.0, :sum => RGB.new(0.0, 0.0, 0.0), :size => 0} }
+  caching = Cache.new { {:squares => 0.0, :sum => RGB.new(0.0, 0.0, 0.0), :size => 0} }
+
+  # size, squares, first, middle, r, g, b
+  caching2 = Numo::DFloat.zeros(WIDTH * HEIGHT, 10)
 end
 
 available = Set.new
 
 # calculate checkpoints in advance
 num_checks  = opts[:checkpoints].to_i
-checkpoints = (1..num_checks).map {|i| [i * colors.size / num_checks - 1, i - 1] }.to_h
+checkpoints = (1..num_checks).map {|i| [i * (opts[:colors] ** 3) / num_checks - 1,
+                                        i - 1] }.to_h
 
 profile :profile => opts[:profiling] do
 
   times = []
   cores = nil
 
-  # loop through all colors that we want to place
-  colors.size.times do |i|
-  #(1 * colors.size / 30).times do |i|
-  #5.times do |i|
+
+  #colors.size.times do |i|
+  i = 0
+  File.open("/tmp/colors.txt", "r").each_line do |data|
+    color = RGB.new(*Marshal.load(data))
   
     # Debug
     if i % 512 == 0
@@ -140,46 +185,56 @@ profile :profile => opts[:profiling] do
   
     if available.size == 0
       best = opts[:start]
+      best2 = best
     else
       # Find the best place from the list of available coordinates
-      # uses parallel processing, most expensive step
-      if available.size > 12000 and opts[:parallel] > 0 and !times.avg.nan? and times.avg.to_i > 0.5 
-        cores = [opts[:parallel], (times.avg / 0.5).to_i].min
-
-        start = Time.now
-        best = available.to_a
-                .parallel_group_by(:cores => cores) do |c|
-                  calc_diff_cache(caching[*c], colors[i])
-                end
-        best = best[best.keys.min].sample :random => PRNG
-        times << (Time.now - start)
-      else
-        # too small, don't parallelize it
-        start = Time.now
-        best = available.to_a
-                .group_by {|c| calc_diff_cache(caching[*c], colors[i]) }
-        times << (Time.now - start)
-        best = best[best.keys.min].sample :random => PRNG
-      end
+      ##
+      best = available.to_a
+                      .group_by {|c| calc_diff_cache(caching[*c], color) }
+      best = best[best.keys.min].sample :random => PRNG
       
-      #sorted = available.sort_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
-      #best = available.to_a.min_by {|c| calc_diff_cache(pixels, caching, c, colors[i]) }
-  
-      #best = sorted[0]
+      start = Time.now
+
+      saatavillat = available.to_a
+
+      avails = caching2[saatavillat.map {|(x, y)| x * WIDTH + y }, false]
+
+      scores = calc_diff_vectorized(avails, color)
+      puts "scores: #{scores.inspect}"
+      poss   = scores <= scores.min
+      puts "poss: #{poss.inspect}"
+      ixs    = poss.to_a.each_index.select {|i| poss[i] == 1 }
+      puts "ixs: #{ixs.inspect}"
+      best2   = saatavillat[ixs.sample :random => PRNG]
+      puts "best: #{best2.inspect}"
+      
+      times << (Time.now - start)
     end
 
-    #p(available.map {|c| [c, calc_diff_cache(pixels, caching, c, colors[i])] }.sort_by {|a, b| b })
-    #p best
-  
-    # Put pixel where it belongs
-    pixels[*best]   = colors[i]
-    neighbs = Specific::available(best, caching, i + 1)
+    p best
+    p best2
+    best = best2
 
+    # Put pixel where it belongs
+    pixels[*best]   = color
+    neighbs = Specific::available(best, caching, i + 1)
+ 
     [best, *neighbs].each do |coord|
-      update_cache caching, coord, colors[i]
+      update_cache caching, coord, color
     end
   
     available.delete best
+
+
+    neighbs2 = Specific::available(best2, caching, i + 1)
+    neigh_ixs = [best2, *neighbs2].map do |coord|
+      coord[0] * WIDTH + coord[1]
+    end
+
+    neighbors = caching2[neigh_ixs, false]
+    update_cache_vec neighbors, color
+
+    #available.delete best2
 
     # adjust available list
     neighbs.each do |neighbor|
@@ -207,6 +262,7 @@ profile :profile => opts[:profiling] do
       debug "Wrote #{fname}"
     end
   
+    i += 1
   end
 
   # Add a white border

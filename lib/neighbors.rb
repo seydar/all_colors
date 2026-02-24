@@ -1,76 +1,29 @@
 # When placing a color, place it in the location where the average color
 # differential from its neighbors is the minimum
-#
-# I'm not able to get much more than 60% CPU out of this. I should investigate
-# vectorizing this somehow (not sure how)
-def calc_diff(pixels, coord, c)
-  diffs = []
-  neighbors(coord).each do |n|
-    nc = pixels[*n]
-    if nc
-      diffs << (nc - c).mag_2
-    end
-  end
 
-  diffs.avg# * (9 - diffs.size) ** 2
-  #diffs.min
-end
-
-def calc_diff_long(pixels, caching, coord, c)
-  sum = []
-  sqs = []
-  neighbors(coord).each do |n|
-    nc = pixels[*n]
-    if nc
-      sum << nc
-      sqs << (nc * nc)
-    end
-  end
-
-  first  = sqs.avg
-  middle = -1 * (c * sum.inject {|s, v| s + v } * 2 / sum.size)
-  last   = (c * c)
-
-  first + middle + last
-end
-
-#def calc_diff_cache(pixels, caching, coord, c)
-#  hash   = caching[*coord]
-#
-#  first  = hash[:squares]
-#  middle = -1 * (c * hash[:sum] * 2)
-#  last   = (c * c)
-#
-#  (first + middle + last) * (9 - hash[:size]) ** 7
-#end
-#
-#def update_cache(caching, coord, c)
-#  hash = caching[*coord]
-#  hash[:size]    += 1
-#  hash[:squares]  = hash[:squares] * (hash[:size] - 1) / hash[:size] + (c * c) / hash[:size]
-#  hash[:sum]     += hash[:sum] * (hash[:size] - 1) / hash[:size] + c.vector / hash[:size]
-#end
-
-# This is smooth, the above is not, for some reason
 def calc_diff_cache(hash, c)
-  size, first, middle = hash[:details]
-
+  size, first, middle = *hash[:details]
   return 0.0 if size == 0
 
-  c = c.hue if HSLUV
-
-  #first  = hash[:squares] / hash[:size]
-  #middle = -1 * (c * hash[:sum] * 2 / hash[:size])
-  #last   = c.sq
-
-  #first  = hash[:first]
-  #middle = c * hash[:middle]
   middle = c * middle
   last   = c.sq
 
-  #(first + middle + last) * Specific::distance_weight(hash[:size])
   val = first + (middle + last) * Specific::distance_weight(size)
-  size > 4 ? val - size : val
+  size > 4 ? val - size : val # what the fuck is happening with this line
+end
+
+def calc_diff_vectorized(avails, c)
+  size  = avails[false, 0]
+  first = avails[false, 5]
+  mid_r = avails[false, 6]
+  mid_g = avails[false, 7]
+  mid_b = avails[false, 8]
+
+  middle = c.R * mid_r + c.G * mid_g + c.B * mid_b
+  last   = c.sq
+
+  val = first + (middle + last) * Specific::distance_weight(size)
+  val - size
 end
 
 def update_cache(caching, coord, c)
@@ -82,6 +35,26 @@ def update_cache(caching, coord, c)
   first           = Specific::distance_weight(hash[:size]) * hash[:squares] / hash[:size]
   middle          = (hash[:sum] * 2 / hash[:size]) * -1
   hash[:details]  = [hash[:size], first, middle]
+end
+
+# size, squares, sum(r), sum(g), sum(b), first, middle(r), middle(g), middle(b)
+def update_cache_vec(neighbors, c)
+  neighbors[false, 0] += 1
+  neighbors[false, 1] += c.sq
+
+  size = neighbors[false, 0]
+  sqs  = neighbors[false, 1]
+
+  neighbors[false, 2] += c.R
+  neighbors[false, 3] += c.G
+  neighbors[false, 4] += c.B
+
+  neighbors[false, 5]  = Specific::distance_weight(size) * sqs / size
+
+  neighbors[false, 6]  = -2 * neighbors[false, 2] / size
+  neighbors[false, 7]  = -2 * neighbors[false, 3] / size
+  neighbors[false, 8]  = -2 * neighbors[false, 4] / size
+
 end
 
 

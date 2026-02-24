@@ -39,7 +39,7 @@ module Specific
   # higher power = more watercolor (preference for filling in spaces)
   # lower power = more coral (preference for similar colors)
   def distance_weight(size)
-    (9 - size)
+    -size + 9 # weirdly phrased to support matrix ops
   end
 
   def contrast_ratio(c1, c2)

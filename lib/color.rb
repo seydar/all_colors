@@ -1,11 +1,10 @@
-require 'numo/narray'
+require 'matrix'
 
 class RGB
   attr_accessor :vector
 
   def initialize(r, g, b)
-    @vector = Numo::NArray[r, g, b]
-    #@vector = [r, g, b]
+    @vector = [r, g, b]
     @r = r
     @g = g
     @b = b
@@ -48,7 +47,6 @@ class RGB
   def *(o)
     case o
     when RGB
-      #@vector.inner(o.vector)
       ip o
     else
       #RGB.new(*(@vector * o))
