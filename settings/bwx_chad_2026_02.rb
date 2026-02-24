@@ -9,7 +9,7 @@ module Specific
   COLORS = 64
   PROFILING = false
 
-  def available(coord, caching, i=nil)
+  def available(coord, caching)
     x, y   = *coord
     neighs = (x - 1..x + 1).to_a.product((y - 1..y + 1).to_a) - [x, y]
     neighs.filter {|x, y| x < WIDTH && x >= 0 && y < HEIGHT && y >= 0 }

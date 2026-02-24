@@ -8,6 +8,8 @@ require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
 require_relative 'lib/sorting.rb'
 
+require 'numo/narray'
+
 PRNG = Random.new rand #1138
 
 #NUM_COLORS = 32 # 64 # 32
@@ -149,8 +151,8 @@ def get_best_score(scores, saatavillat)
   best   = saatavillat[ixs.sample :random => PRNG]
 end
 
-def update_neighbors(best, caching, color)
-  neighbs = Specific::available(best, caching, i + 1)
+def update_neighbors(best, caching, color, available)
+  neighbs = Specific::available(best, caching)
 
   neigh_ixs = [best, *neighbs].map do |coord|
     coord[1] * WIDTH + coord[0]
@@ -158,6 +160,8 @@ def update_neighbors(best, caching, color)
 
   neighbors = caching[neigh_ixs, false]
   update_cache_vec neighbors, color
+
+  neighbs
 end
 
 
@@ -189,7 +193,7 @@ profile :profile => opts[:profiling] do
   cores = nil
 
   debug "colors loaded"
-  debug "running until #{round(100 * (opts[:colors] ** 3) / (WIDTH.to_f * HEIGHT), 5)}%"
+  debug "running until #{(100 * (opts[:colors] ** 3) / (WIDTH.to_f * HEIGHT)).round 5}%"
 
   #colors.size.times do |i|
   i = 0
@@ -224,9 +228,7 @@ profile :profile => opts[:profiling] do
     # Put pixel where it belongs
     pixels[*best]   = color
 
-    update_neighbors best, caching, color
-
-    available.delete best
+    neighbs = update_neighbors best, caching, color, available
 
     # adjust available list
     neighbs.each do |neighbor|
@@ -235,6 +237,8 @@ profile :profile => opts[:profiling] do
         available << neighbor
       end
     end
+
+    available.delete best
   
     if checkpoints[i]
       debug "Checkpoint #{checkpoints[i]}"

@@ -9,7 +9,7 @@ module Specific
   COLORS = 64
   PROFILING = false
 
-  def available(coord, caching, i=nil)
+  def available(coord, caching)
     x, y   = *coord
     neighs = (x - 1..x + 1).to_a.product((y - 1..y + 1).to_a) - [x, y]
     neighs.filter {|x, y| x < WIDTH && x >= 0 && y < HEIGHT && y >= 0 }
@@ -20,9 +20,9 @@ module Specific
     #colors.sort_by {|c| Math.sqrt(0.299 * c.R ** 2 + 0.587 * c.G ** 2 + 0.114 * c.B ** 2) }
 
     # Contrast ratio
-    colors.each_slice(colors.size / 4).map do |cs|
+    colors.each_slice(colors.size / 1).map do |cs|
       cs.sort {|c1, c2| contrast_ratio c1, c2 }
-    end.reverse.flatten.reverse
+    end.flatten
     
     #colors.sort {|c1, c2| contrast_ratio c1, c2 }
 
