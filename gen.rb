@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ruby --disable-yjit
+#!/usr/bin/env -S ruby --enable-yjit
 require 'fileutils'
 require 'optimist'
 require 'hsluv'
@@ -7,9 +7,6 @@ require_relative 'lib/color.rb'
 require_relative 'lib/image.rb'
 require_relative 'lib/neighbors.rb'
 require_relative 'lib/sorting.rb'
-
-require 'numo/narray'
-require 'pry'
 
 PRNG = Random.new rand #1138
 
