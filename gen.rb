@@ -10,7 +10,7 @@ require_relative 'lib/sorting.rb'
 
 require 'numo/narray'
 
-PRNG = Random.new rand #1138
+PRNG = Random.new rand(10_000) #1138
 
 #NUM_COLORS = 32 # 64 # 32
 #WIDTH = 256 # 512 # 256
@@ -78,6 +78,8 @@ def scope
 end
 
 
+filename = "/tmp/colors_#{rand.round 6}.txt"
+
 # Create a new scope for the colors variable so that it can be GCed
 scope do
   
@@ -114,7 +116,7 @@ scope do
   
   colors = Specific::order colors
 
-  open "/tmp/colors.txt", "w" do |f|
+  open filename, "w" do |f|
     colors.each do |c|
       f.puts Marshal.dump(c.vector)
     end
@@ -197,7 +199,7 @@ profile :profile => opts[:profiling] do
 
   #colors.size.times do |i|
   i = 0
-  File.open("/tmp/colors.txt", "r").each_line do |data|
+  File.open(filename, "r").each_line do |data|
     color = RGB.new(*Marshal.load(data))
   
     # Debug

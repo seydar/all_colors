@@ -1,5 +1,3 @@
-require 'matrix'
-
 class RGB
   attr_accessor :vector
 
@@ -47,6 +45,7 @@ class RGB
   def *(o)
     case o
     when RGB
+      #@vector.inner_product(o.vector)
       ip o
     else
       #RGB.new(*(@vector * o))

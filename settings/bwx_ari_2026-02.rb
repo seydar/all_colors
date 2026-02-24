@@ -4,7 +4,7 @@ module Specific
   HSLUV  = false
   filename = __FILE__.split("/").last.split(".")[0..-2].join(".")
   DIRECTORY = "output/#{filename}_#{HSLUV ? "hsluv" : "rgb"}_contrast"
-  START  = [75, 511]
+  START  = [95, 511]
   SIZE   = [875, 512]
   COLORS = 64
   PROFILING = false
@@ -20,11 +20,12 @@ module Specific
     #colors.sort_by {|c| Math.sqrt(0.299 * c.R ** 2 + 0.587 * c.G ** 2 + 0.114 * c.B ** 2) }
 
     # Contrast ratio
-    colors.each_slice(colors.size / 1).map do |cs|
-      cs.sort {|c1, c2| contrast_ratio c1, c2 }
-    end.flatten
+    #colors.each_slice(colors.size / 3).map do |cs|
+    #  cs.sort {|c1, c2| contrast_ratio c1, c2 }
+    #end.flatten
     
-    #colors.sort {|c1, c2| contrast_ratio c1, c2 }
+    #colors.sort_by {|c| c.relative_luminance }
+    colors
 
     #colors.each_slice(colors.size / 12).to_a.shuffle.flatten
 
